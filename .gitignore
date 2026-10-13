@@ -1,0 +1,22 @@
+
+# Build output
+bin/
+obj/
+
+# Visual Studio
+.vs/
+
+# VS Code workspace settings
+.vscode/
+
+# User-specific files
+*.user
+*.suo
+
+# Environment and secret files
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
