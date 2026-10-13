@@ -16,5 +16,9 @@ public interface IUserRepository
 
     Task<User?> UpdateUser(int id, User user);
 
+    Task<User?> UpdateProfileAsync(int id, User user);
+
+    Task<bool> UpdatePasswordAsync(int id, string passwordHash);
+
     Task<bool> DeleteUser(int id);
 }

@@ -57,6 +57,7 @@ builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<ISkillRepository, SkillRepository>();
 builder.Services.AddScoped<ILearningSkillRepository, LearningSkillRepository>();
 builder.Services.AddScoped<ISwapRequestRepository, SwapRequestRepository>();
+builder.Services.AddScoped<IMessageRepository, MessageRepository>();
 
 var app = builder.Build();
 

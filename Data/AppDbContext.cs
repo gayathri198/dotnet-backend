@@ -24,6 +24,8 @@ public class AppDbContext : DbContext
 
     public DbSet<SwapRequest> SwapRequests { get; set; }
 
+    public DbSet<Message> Messages { get; set; }
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -39,5 +41,23 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(request => request.ReceiverId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Message>()
+            .HasOne(message => message.Sender)
+            .WithMany()
+            .HasForeignKey(message => message.SenderId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Message>()
+            .HasOne(message => message.Receiver)
+            .WithMany()
+            .HasForeignKey(message => message.ReceiverId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Message>()
+            .HasIndex(message => new { message.SenderId, message.ReceiverId, message.Id });
+
+        modelBuilder.Entity<Message>()
+            .HasIndex(message => new { message.ReceiverId, message.SenderId, message.Id });
     }
 }

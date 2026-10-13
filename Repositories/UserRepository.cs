@@ -65,6 +65,36 @@ public class UserRepository : IUserRepository
         return existingUser;
     }
 
+    public async Task<User?> UpdateProfileAsync(int id, User user)
+    {
+        var existingUser = await _context.Users.FindAsync(id);
+        if (existingUser == null)
+        {
+            return null;
+        }
+
+        existingUser.FullName = user.FullName;
+        existingUser.Username = user.Username;
+        existingUser.Email = user.Email;
+        existingUser.MobileNumber = user.MobileNumber;
+
+        await _context.SaveChangesAsync();
+        return existingUser;
+    }
+
+    public async Task<bool> UpdatePasswordAsync(int id, string passwordHash)
+    {
+        var user = await _context.Users.FindAsync(id);
+        if (user == null)
+        {
+            return false;
+        }
+
+        user.Password = passwordHash;
+        await _context.SaveChangesAsync();
+        return true;
+    }
+
     // DELETE
     public async Task<bool> DeleteUser(int id)
     {

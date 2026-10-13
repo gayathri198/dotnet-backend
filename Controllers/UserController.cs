@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.IdentityModel.Tokens;
 using SkillSwapBackend.Models;
@@ -88,6 +89,38 @@ public class UserController : ControllerBase
         });
     }
 
+    [Authorize]
+    [HttpPost("change-password")]
+    public async Task<IActionResult> ChangePassword(ChangePasswordViewModel model)
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        if (!int.TryParse(subject, out var userId) || userId <= 0)
+        {
+            return Unauthorized();
+        }
+
+        var user = await _userRepository.GetUserById(userId);
+        if (user == null)
+        {
+            return Unauthorized();
+        }
+
+        if (!BCrypt.Net.BCrypt.Verify(model.CurrentPassword, user.Password))
+        {
+            return BadRequest("Current password is incorrect.");
+        }
+
+        var passwordHash = BCrypt.Net.BCrypt.HashPassword(model.NewPassword);
+        if (!await _userRepository.UpdatePasswordAsync(userId, passwordHash))
+        {
+            return NotFound("User not found.");
+        }
+
+        return Ok("Password changed successfully.");
+    }
+
     // READ ALL
     [HttpGet]
     public async Task<IActionResult> GetAllUsers()
@@ -152,29 +185,37 @@ public class UserController : ControllerBase
     }
 
     // UPDATE
+    [Authorize]
     [HttpPut("{id}")]
     public async Task<IActionResult> UpdateUser(
         int id,
-        UserViewModel model)
+        UpdateUserProfileViewModel model)
     {
-        var user = new User
+        var currentUserId = GetCurrentUserId();
+        if (currentUserId == null)
         {
-            FullName = model.FullName,
-            Username = model.Username,
-            Email = model.Email,
-            Password = model.Password,
-            MobileNumber = model.MobileNumber
-        };
-
-        var updatedUser =
-            await _userRepository.UpdateUser(id, user);
-
-        if (updatedUser == null)
-        {
-            return NotFound("User not found");
+            return Unauthorized();
         }
 
-        return Ok(updatedUser);
+        if (id != currentUserId)
+        {
+            return Forbid();
+        }
+
+        return await UpdateProfileAsync(currentUserId.Value, model);
+    }
+
+    [Authorize]
+    [HttpPut("profile")]
+    public async Task<IActionResult> UpdateMyProfile(UpdateUserProfileViewModel model)
+    {
+        var userId = GetCurrentUserId();
+        if (userId == null)
+        {
+            return Unauthorized();
+        }
+
+        return await UpdateProfileAsync(userId.Value, model);
     }
 
     // DELETE
@@ -189,5 +230,42 @@ public class UserController : ControllerBase
         }
 
         return Ok("User deleted successfully");
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier)
+            ?? User.FindFirstValue(JwtRegisteredClaimNames.Sub);
+
+        return int.TryParse(subject, out var userId) && userId > 0
+            ? userId
+            : null;
+    }
+
+    private async Task<IActionResult> UpdateProfileAsync(
+        int userId,
+        UpdateUserProfileViewModel model)
+    {
+        var updatedUser = await _userRepository.UpdateProfileAsync(userId, new User
+        {
+            FullName = model.FullName.Trim(),
+            Username = model.Username.Trim(),
+            Email = model.Email.Trim(),
+            MobileNumber = model.MobileNumber.Trim()
+        });
+
+        if (updatedUser == null)
+        {
+            return NotFound("User not found.");
+        }
+
+        return Ok(new
+        {
+            updatedUser.Id,
+            updatedUser.FullName,
+            updatedUser.Username,
+            updatedUser.Email,
+            updatedUser.MobileNumber
+        });
     }
 }
